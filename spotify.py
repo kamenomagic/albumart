@@ -8,7 +8,7 @@ class Spotify:
         token = util.oauth2.SpotifyClientCredentials(client_id=client_id, client_secret=client_secret)
         self.spotify = spotipy.Spotify(token.get_access_token())
 
-    def get_client(self):
+    def client(self):
         return self.spotify
 
     def test_search(self, query):
