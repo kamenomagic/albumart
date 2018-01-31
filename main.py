@@ -1,12 +1,7 @@
 #! /usr/bin/python
-from spotify import Spotify
-
 
 def main():
-    spotify = Spotify()
-    results = spotify.test_search('Queen')
-    for result in results:
-        print(result)
+    pass
 
 
 if __name__ == '__main__':
