@@ -5,8 +5,9 @@ from spotipy import util
 from config import *
 import sys
 import os
+import time
 
-current_location_file_name = 'albart_current_scrape_location.txt'
+location_file_name = 'albart_current_scrape_location.txt'
 genres = ['Hip-Hop', 'Pop', 'Country', 'Latin', 'Electronic/Dance',
           'R&B', 'Rock', 'Christian', 'Classical', 'Indie',
           'Roots & Acoustic', 'K-Pop', 'Metal', 'Reggae', 'Soul',
@@ -15,27 +16,35 @@ token = util.oauth2.SpotifyClientCredentials(client_id=client_id, client_secret=
 spotify = spotipy.Spotify(token.get_access_token())
 mongo = MongoClient()
 db = mongo.albart
-
+songs = db.songs
 
 def main():
-    if os.path.exists(current_location_file_name):
-        with open(current_location_file_name) as current_location:
-            genre_index, current_offset = current_location.readline().split('-')
-            print(genre_index, current_offset)
-    with open(current_location_file_name, 'w') as current_location:
-        current_location.writelines('0-2')
-        # for i, genre in enumerate(genres):
-        #     current_offset = scrape_genre(genre, current_offset)
-        #     current_location.write(i, current_offset)
+    location_exists = os.path.exists(location_file_name)
+    with open(location_file_name, 'r+' if location_exists else 'w+') as location_file:
+        location_strings = location_file.read().split('-')
+        genre_index = int(location_strings[0]) if location_exists else 0
+        current_offset = int(location_strings[1]) if location_exists else 0
+        save_location(genre_index, current_offset, location_file)
+        for i, genre in enumerate(genres):
+            current_offset = scrape_genre(genre, current_offset)
+            save_location(i, current_offset)
 
 
 def scrape_genre(genre, offset):
     album = get_album(genre, offset=offset)
+    #Save to db
     return offset
 
 
 def get_album(genre, query='', type='album', limit=50, offset=0):
     query += ' genre:' + genre
+
+
+def save_location(genre_index, current_offset, location_file):
+    location_file.seek(0)
+    location_file.truncate()
+    location_file.writelines('{}-{}'.format(genre_index, current_offset))
+    print("Saved location: {}-{}".format(genre_index, current_offset))
 
 
 def test_search(query):
