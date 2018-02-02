@@ -18,16 +18,15 @@ mongo = MongoClient()
 db = mongo.albart
 songs = db.songs
 
+
 def main():
     location_exists = os.path.exists(location_file_name)
     with open(location_file_name, 'r+' if location_exists else 'w+') as location_file:
-        location_strings = location_file.read().split('-')
-        genre_index = int(location_strings[0]) if location_exists else 0
-        current_offset = int(location_strings[1]) if location_exists else 0
-        save_location(genre_index, current_offset, location_file)
-        for i, genre in enumerate(genres):
+        genre_index, current_offset = init_location(location_file, location_exists)
+        for i in range(genre_index, len(genres), 1):
+            genre = genres[i]
             current_offset = scrape_genre(genre, current_offset)
-            save_location(i, current_offset)
+            save_location(i, current_offset, location_file)
 
 
 def scrape_genre(genre, offset):
@@ -38,13 +37,6 @@ def scrape_genre(genre, offset):
 
 def get_album(genre, query='', type='album', limit=50, offset=0):
     query += ' genre:' + genre
-
-
-def save_location(genre_index, current_offset, location_file):
-    location_file.seek(0)
-    location_file.truncate()
-    location_file.writelines('{}-{}'.format(genre_index, current_offset))
-    print("Saved location: {}-{}".format(genre_index, current_offset))
 
 
 def test_search(query):
@@ -62,6 +54,21 @@ def test_search(query):
         # pp.pprint(spotify.audio_analysis(track_id))
         print(spotify.audio_features([track_id]))
         break
+
+
+def init_location(location_file, location_exists):
+    location_strings = location_file.read().split('-')
+    genre_index = int(location_strings[0]) if location_exists else 0
+    current_offset = int(location_strings[1]) if location_exists else 0
+    save_location(genre_index, current_offset, location_file)
+    return genre_index, current_offset
+
+
+def save_location(genre_index, current_offset, location_file):
+    location_file.seek(0)
+    location_file.truncate()
+    location_file.writelines('{}-{}'.format(genre_index, current_offset))
+    print("Saved location: {}-{}".format(genre_index, current_offset))
 
 
 if __name__ == '__main__':
