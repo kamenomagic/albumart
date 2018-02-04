@@ -9,17 +9,21 @@ from spotipy import util
 from config import *
 
 location_file_name = 'albart_current_scrape_location.txt'
-genres = ['Hip-Hop', 'Pop', 'Country', 'Latin', 'Electronic/Dance', 'R&B', 'Rock', 'Christian', 'Classical', 'Indie',
-          'Roots & Acoustic', 'K-Pop', 'Metal', 'Reggae', 'Soul', 'Punk', 'Blues', 'Funk']
-album_count_per_genre = 200
-album_count_per_request = 50
+start_year = 2000
+# 2018
+end_year = 2001
+# 100000?
+album_count_per_year = 3
+# 50
+album_count_per_request = 3
 
 token = util.oauth2.SpotifyClientCredentials(client_id=client_id, client_secret=client_secret)
-spotify = spotipy.Spotify(token.get_access_token())
+spotify = spotipy.Spotify(auth=token.get_access_token())
+
 
 mongo = MongoClient()
 db = mongo.albart
-songs = db.songs
+tracks = db.tracks
 
 
 def main():
@@ -35,11 +39,11 @@ def main():
                 print('The database and current location file have been deleted.')
         exit()
     with open(location_file_name, 'r+' if location_exists else 'w+') as location_file:
-        genre_index, current_offset = init_location(location_file, location_exists)
-        for i in range(genre_index, len(genres), 1):
-            for j in range(current_offset, album_count_per_genre, album_count_per_request):
+        year, current_offset = init_location(location_file, location_exists)
+        for i in range(year, end_year, 1):
+            for j in range(current_offset, album_count_per_year, album_count_per_request):
                 current_offset = 0
-                finished = scrape_genre(genres[i], j)
+                finished = scrape_year(i, j)
                 save_location(i, j, location_file)
                 if finished:
                     break
@@ -47,52 +51,41 @@ def main():
         os.remove(location_file_name)
 
 
-def scrape_genre(genre, offset):
+def scrape_year(year, offset):
     # Returns true when it has scraped all albums
-    album = get_albums(genre, offset=offset, limit=album_count_per_request)
-    songs.insert_one({'test': 'hello'})
-    # Save to db
-    return len(album) < album_count_per_request
+    albums = get_albums(year, offset=offset, limit=album_count_per_request)
+    for album in albums:
+        for track in spotify.album_tracks(album['id'])['items']:
+            track['analysis'] = spotify.audio_analysis(track['id'])
+            track['analysis']['available_markets'] = None
+            track['features'] = spotify.audio_features([track['id']])
+            tracks.insert_one(track)
+            break
+    return len(albums) < album_count_per_request
 
 
-def get_albums(genre, query='', entity_type='album', limit=50, offset=0):
-    query += ' genre:' + genre
-    album = ''
-    return album
-
-
-def test_search(query):
-    # Debugging method, not permanent
-    import pprint
-    pp = pprint.PrettyPrinter(indent=2)
-
-    results = dict(spotify.search(q=query, limit=3, offset=0, type='album'))
-    for item in results['albums']['items']:
-        item['available_markets'] = None
-    album_id = results['albums']['items'][0]['id']
-    album_tracks = spotify.album_tracks(album_id)['items']
-    for track in album_tracks:
-        track_id = track['id']
-        # pp.pprint(spotify.audio_analysis(track_id))
-        print(spotify.audio_features([track_id]))
-        break
+def get_albums(year, query='', entity_type='album', limit=50, offset=0):
+    albums = dict(spotify.search(q='year:' + str(year), limit=limit, offset=offset, type='album'))['albums']['items']
+    for album in albums:
+        album['available_markets'] = None
+    return albums
 
 
 def init_location(location_file, location_exists):
     location_strings = location_file.read().split('-')
-    genre_index = int(location_strings[0]) if location_exists else 0
+    year = int(location_strings[0]) if location_exists else start_year
     current_offset = int(location_strings[1]) if location_exists else 0
-    save_location(genre_index, current_offset, location_file)
+    save_location(year, current_offset, location_file)
     if location_exists:
-        print('Starting from location {}-{}'.format(genre_index, current_offset))
-    return genre_index, current_offset
+        print('Starting from location {}-{}'.format(year, current_offset))
+    return year, current_offset
 
 
-def save_location(genre_index, current_offset, location_file):
+def save_location(year, current_offset, location_file):
     location_file.seek(0)
     location_file.truncate()
-    location_file.writelines('{}-{}'.format(genre_index, current_offset))
-    print("Saved location: {}-{}".format(genre_index, current_offset))
+    location_file.writelines('{}-{}'.format(year, current_offset))
+    print("Saved location: {}-{}".format(year, current_offset))
 
 
 if __name__ == '__main__':
