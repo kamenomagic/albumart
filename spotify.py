@@ -12,12 +12,9 @@ from config import *
 
 location_file_name = 'albart_current_scrape_location.txt'
 start_year = 2017
-# 2018
-end_year = 2000
-# 100000?
-album_count_per_year = 3
-# 50
-album_count_per_request = 3
+end_year = 1999
+album_count_per_year = 100000
+album_count_per_request = 50
 
 token = util.oauth2.SpotifyClientCredentials(client_id=client_id, client_secret=client_secret)
 spotify = spotipy.Spotify(auth=token.get_access_token())
