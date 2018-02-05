@@ -11,7 +11,7 @@ from config import *
 location_file_name = 'albart_current_scrape_location.txt'
 start_year = 2000
 # 2018
-end_year = 2001
+end_year = 2003
 # 100000?
 album_count_per_year = 3
 # 50
@@ -76,7 +76,7 @@ def init_location(location_file, location_exists):
     year = int(location_strings[0]) if location_exists else start_year
     current_offset = int(location_strings[1]) if location_exists else 0
     save_location(year, current_offset, location_file)
-    if location_exists:
+    if not location_exists:
         print('Starting from location {}-{}'.format(year, current_offset))
     return year, current_offset
 
