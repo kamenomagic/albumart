@@ -11,9 +11,9 @@ from spotipy import util
 from config import *
 
 location_file_name = 'albart_current_scrape_location.txt'
-start_year = 2000
+start_year = 2017
 # 2018
-end_year = 2001
+end_year = 2000
 # 100000?
 album_count_per_year = 3
 # 50
@@ -42,7 +42,7 @@ def main():
         exit()
     with open(location_file_name, 'r+' if location_exists else 'w+') as location_file:
         year, current_offset = init_location(location_file, location_exists)
-        year_iterator = trange(year, end_year, 1, leave=True)
+        year_iterator = trange(year, end_year, -1, leave=True)
         for i in year_iterator:
             year_iterator.set_description('Year:   {:>100}'.format(i))
             album_iterator = trange(current_offset, album_count_per_year, album_count_per_request, leave=True)
