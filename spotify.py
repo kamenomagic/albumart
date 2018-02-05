@@ -45,6 +45,7 @@ def main():
                 current_offset = 0
                 finished = scrape_year(i, j)
                 save_location(i, j, location_file)
+                print('Finished and saved location: {}-{}'.format(i, j))
                 if finished:
                     break
         print('Completely finished scraping, so deleting location file.')
@@ -77,7 +78,7 @@ def init_location(location_file, location_exists):
     current_offset = int(location_strings[1]) if location_exists else 0
     save_location(year, current_offset, location_file)
     if not location_exists:
-        print('Starting from location {}-{}'.format(year, current_offset))
+        print('Created location file, starting from location {}-{}'.format(year, current_offset))
     return year, current_offset
 
 
@@ -85,7 +86,6 @@ def save_location(year, current_offset, location_file):
     location_file.seek(0)
     location_file.truncate()
     location_file.writelines('{}-{}'.format(year, current_offset))
-    print("Saved location: {}-{}".format(year, current_offset))
 
 
 if __name__ == '__main__':
