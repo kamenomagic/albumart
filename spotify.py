@@ -60,10 +60,10 @@ def scrape_year(year, offset):
     albums = get_albums(year, offset=offset, limit=album_count_per_request)
     album_iterator = tqdm(albums)
     for album in album_iterator:
-        album_iterator.set_description('Album:  {:>100}'.format(album['name']))
+        album_iterator.set_description('Album:  {:>100}'.format(album['name'].encode('ascii', 'ignore')))
         track_iterator = tqdm(spotify.album_tracks(album['id'])['items'])
         for track in track_iterator:
-            track_iterator.set_description('Track:  {:>100}'.format(track['name']))
+            track_iterator.set_description('Track:  {:>100}'.format(track['name'].encode('ascii', 'ignore')))
             track['analysis'] = spotify.audio_analysis(track['id'])
             track['analysis']['available_markets'] = None
             track['features'] = spotify.audio_features([track['id']])
