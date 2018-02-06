@@ -72,6 +72,7 @@ def scrape_year(year, offset):
             track['analysis'] = analysis
             track['analysis']['available_markets'] = None
             track['features'] = spotify.audio_features([track['id']])
+            track['available_markets'] = None
             tracks.insert_one(track)
     return len(albums) < album_count_per_request
 
