@@ -27,6 +27,8 @@ tracks = db.tracks
 
 def main():
     location_exists = os.path.exists(location_file_name)
+    if location_exists:
+        print('Location exists, using {}'.format(location_file_name))
     if len(sys.argv) > 1 and sys.argv[1] in 'fresh':
         print('Are you sure you want to delete the current scraping location and the entire database (y/n)?')
         if sys.stdin.readline().lower().strip() in ['y', 'yes', 'yup', 'yeah']:
