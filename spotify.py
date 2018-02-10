@@ -10,7 +10,7 @@ from spotipy import util
 
 from config import *
 
-location_file_name = 'albart_current_scrape_location.txt'
+location_file_name = '/tmp/albart_current_scrape_location.txt'
 start_year = 2017
 end_year = 1999
 album_count_per_year = 100000
