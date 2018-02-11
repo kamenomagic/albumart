@@ -85,7 +85,7 @@ def init_location():
     location_strings = location['location'].split('-') if location_exists else None
     year = int(location_strings[0]) if location_exists else start_year
     current_offset = int(location_strings[1]) if location_exists else 0
-    save_location(year, current_offset, exists=not location_exists)
+    save_location(year, current_offset, exists=location_exists)
     if not location_exists:
         tqdm.write('Created location file; starting to scrape from location {}-{}'.format(year, current_offset))
     return year, current_offset
