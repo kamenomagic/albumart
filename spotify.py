@@ -10,7 +10,6 @@ from spotipy import util
 
 from config import *
 
-location_file_name = '/tmp/albart_current_scrape_location.txt'
 start_year = 2017
 end_year = 1999
 album_count_per_year = 100000
@@ -23,38 +22,31 @@ spotify = spotipy.Spotify(auth=token.get_access_token())
 mongo = MongoClient()
 db = mongo.albart
 tracks = db.tracks
+location_collection = db.location
 
 
 def main():
-    location_exists = os.path.exists(location_file_name)
-    if location_exists:
-        print('Location exists, using {}'.format(location_file_name))
     if len(sys.argv) > 1 and sys.argv[1] in 'fresh':
         print('Are you sure you want to delete the current scraping location and the entire database (y/n)?')
         if sys.stdin.readline().lower().strip() in ['y', 'yes', 'yup', 'yeah']:
             print('If you are really sure you want to delete everything, type "YES".')
             if sys.stdin.readline().strip() in 'YES':
-                if location_exists:
-                    os.remove(location_file_name)
                 mongo.drop_database(db)
-                print('The database and current location file have been deleted.')
+                print('The database and current location have been deleted.')
         exit()
-    with open(location_file_name, 'r+' if location_exists else 'w+') as location_file:
-        year, current_offset = init_location(location_file, location_exists)
-        year_iterator = trange(year, end_year, -1, leave=True)
-        for i in year_iterator:
-            year_iterator.set_description('Year:   {:>100}'.format(i))
-            album_iterator = trange(current_offset, album_count_per_year, album_count_per_request, leave=True)
-            for j in album_iterator:
-                album_iterator.set_description('Offset: {:>100}'.format(j))
-                current_offset = 0
-                finished = scrape_year(i, j)
-                save_location(i, j, location_file)
-                tqdm.write('Finished and saved location: {}-{}'.format(i, j))
-                if finished:
-                    break
-        tqdm.write('\n\n\nCompletely finished scraping, so deleting location file.')
-        os.remove(location_file_name)
+    year, current_offset = init_location()
+    year_iterator = trange(year, end_year, -1, leave=True)
+    for i in year_iterator:
+        year_iterator.set_description('Year:   {:>100}'.format(i))
+        album_iterator = trange(current_offset, album_count_per_year, album_count_per_request, leave=True)
+        for j in album_iterator:
+            album_iterator.set_description('Offset: {:>100}'.format(j))
+            current_offset = 0
+            finished = scrape_year(i, j)
+            save_location(i, j)
+            tqdm.write('Finished and saved location: {}-{}'.format(i, j))
+            if finished:
+                break
 
 
 def scrape_year(year, offset):
@@ -87,20 +79,22 @@ def get_albums(year, query='', entity_type='album', limit=50, offset=0):
     return albums
 
 
-def init_location(location_file, location_exists):
-    location_strings = location_file.read().split('-')
+def init_location():
+    location = location_collection.find_one()
+    location_exists = location is not None
+    location_strings = location['location'].split('-') if location_exists else None
     year = int(location_strings[0]) if location_exists else start_year
     current_offset = int(location_strings[1]) if location_exists else 0
-    save_location(year, current_offset, location_file)
+    save_location(year, current_offset, exists=not location_exists)
     if not location_exists:
         tqdm.write('Created location file; starting to scrape from location {}-{}'.format(year, current_offset))
     return year, current_offset
 
 
-def save_location(year, current_offset, location_file):
-    location_file.seek(0)
-    location_file.truncate()
-    location_file.writelines('{}-{}'.format(year, current_offset))
+def save_location(year, current_offset, exists=True):
+    if not exists:
+        location_collection.insert_one({'location': '{}-{}'.format(year, current_offset)})
+    location_collection.replace_one({'location': {'$exists': True}}, {'location': '{}-{}'.format(year, current_offset)})
 
 
 if __name__ == '__main__':
