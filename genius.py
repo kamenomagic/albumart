@@ -1,7 +1,6 @@
 import os
 import genius
 from tqdm import tqdm
-from tqdm import trange
 from pymongo import MongoClient
 
 init_file = 'genius_init.txt'
