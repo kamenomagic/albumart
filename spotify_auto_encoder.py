@@ -1,37 +1,50 @@
 import tensorflow as tf
 import numpy as np
 from pymongo import MongoClient
-from tqdm import tqdm
+from tqdm import tqdm, trange
 
 
 class SpotifyAutoEncoder:
     spotify_feature_size = 35
+    compressed_size = 8
+    epochs = 200
 
     def __init__(self):
         self.sess = tf.Session()
-        self.x = tf.placeholder(tf.float16, [self.spotify_feature_size])
-        encoder0 = tf.layers.dense(self.x, 128, activation=tf.nn.relu)
-        encoder1 = tf.layers.dense(encoder0, 64, activation=tf.nn.relu)
-        encoder2 = tf.layers.dense(encoder1, 32, activation=tf.nn.relu)
-        encoder3 = tf.layers.dense(encoder2, 16, activation=tf.nn.relu)
-        self.encoding = encoder3
-        self.training_decoder = self.build_decoder(self.encoding, [self.spotify_feature_size])
-        self.decoder = self.build_decoder(self.x, [self.spotify_feature_size])
+        self.x = tf.placeholder(tf.float32, [1, self.spotify_feature_size], name='x')
+        self.encoded_x = tf.placeholder(tf.float32, [1, self.compressed_size], name='encoded_x')
+        encoder0 = tf.layers.dense(self.x, 128, activation=tf.nn.relu, name='encoder0')
+        encoder1 = tf.layers.dense(encoder0, 64, activation=tf.nn.relu, name='encoder1')
+        encoder2 = tf.layers.dense(encoder1, 32, activation=tf.nn.relu, name='encoder2')
+        encoder3 = tf.layers.dense(encoder2, 16, activation=tf.nn.relu, name='encoder3')
+        encoder4 = tf.layers.dense(encoder3, 8, activation=tf.nn.relu, name='encoder4')
+        self.encoding = encoder4
+        self.training_decoder = self.build_decoder(self.encoding, self.spotify_feature_size, reuse=False)
+        self.decoder = self.build_decoder(self.encoded_x, self.spotify_feature_size)
+        self.loss = tf.reduce_sum(self.x - self.training_decoder, name='loss')
+        self.train = tf.train.AdamOptimizer().minimize(self.loss, name='train')
 
     @staticmethod
     def build_decoder(x, output_shape, reuse=True):
-        decoder0 = tf.layers.dense(x, 32, activation=tf.nn.relu, reuse=reuse)
-        decoder1 = tf.layers.dense(decoder0, 32, activation=tf.nn.relu, reuse=reuse)
-        decoder2 = tf.layers.dense(decoder1, 64, activation=tf.nn.relu, reuse=reuse)
-        decoder3 = tf.layers.dense(decoder2, 128, activation=tf.nn.relu, reuse=reuse)
-        decoding = tf.layers.dense(decoder3, output_shape, activation=tf.nn.relu, reuse=reuse)
+        decoder0 = tf.layers.dense(x, 16, activation=tf.nn.relu, reuse=reuse, name='decoder0')
+        decoder1 = tf.layers.dense(decoder0, 32, activation=tf.nn.relu, reuse=reuse, name='decoder1')
+        decoder2 = tf.layers.dense(decoder1, 64, activation=tf.nn.relu, reuse=reuse, name='decoder2')
+        decoder3 = tf.layers.dense(decoder2, 128, activation=tf.nn.relu, reuse=reuse, name='decoder3')
+        decoding = tf.layers.dense(decoder3, output_shape, activation=tf.nn.relu, reuse=reuse, name='decoder_out')
         return decoding
 
-    def train(self):
+    def start_training(self):
         self.sess.run(tf.global_variables_initializer())
-        for track in tqdm(MongoClient().albart.tracks.find()):
-            if (len(self.json_to_spotify_feature(track))) != 35:
-                print(len(self.json_to_spotify_feature(track)))
+        epoch_iterator = trange(self.epochs)
+        for e in epoch_iterator:
+            current_sum = 0
+            count = 0
+            for track in MongoClient().albart.tracks.find():
+                feature = self.json_to_spotify_feature(track)
+                loss, _ = self.sess.run([self.loss, self.training_decoder], feed_dict={self.x: [feature]})
+                count += 1
+                current_sum += loss
+            epoch_iterator.set_description('Epoch {} average training loss: {}'.format(e, current_sum / count))
 
     @staticmethod
     def json_to_spotify_feature(json):
@@ -52,12 +65,13 @@ class SpotifyAutoEncoder:
         for key in features_keys:
             if features[key] is not None and not isinstance(features[key], str):
                 spotify_feature.append(features[key])
+        spotify_feature = [0.0 if feature == '' else float(feature) for feature in spotify_feature]
         return np.array(spotify_feature)
 
 
 def main():
     auto_encoder = SpotifyAutoEncoder()
-    auto_encoder.train()
+    auto_encoder.start_training()
 
 
 if __name__ == '__main__':
