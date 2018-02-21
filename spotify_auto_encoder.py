@@ -11,17 +11,17 @@ class SpotifyAutoEncoder:
 
     def __init__(self):
         self.sess = tf.Session()
-        self.x = tf.placeholder(tf.float32, [1, self.spotify_feature_size], name='x')
-        self.encoded_x = tf.placeholder(tf.float32, [1, self.compressed_size], name='encoded_x')
+        self.x = tf.placeholder(tf.float64, [1, self.spotify_feature_size], name='x')
+        self.encoded_x = tf.placeholder(tf.float64, [1, self.compressed_size], name='encoded_x')
         encoder0 = tf.layers.dense(self.x, 128, activation=tf.nn.relu, name='encoder0')
         encoder1 = tf.layers.dense(encoder0, 64, activation=tf.nn.relu, name='encoder1')
         encoder2 = tf.layers.dense(encoder1, 32, activation=tf.nn.relu, name='encoder2')
         encoder3 = tf.layers.dense(encoder2, 16, activation=tf.nn.relu, name='encoder3')
         encoder4 = tf.layers.dense(encoder3, 8, activation=tf.nn.relu, name='encoder4')
-        self.encoding = encoder4
-        self.training_decoder = self.build_decoder(self.encoding, self.spotify_feature_size, reuse=False)
+        self.encoder = encoder4
+        self.training_decoder = self.build_decoder(self.encoder, self.spotify_feature_size, reuse=False)
         self.decoder = self.build_decoder(self.encoded_x, self.spotify_feature_size)
-        self.loss = tf.reduce_sum(self.x - self.training_decoder, name='loss')
+        self.loss = tf.reduce_sum(tf.abs(self.x - self.training_decoder), name='loss')
         self.train = tf.train.AdamOptimizer().minimize(self.loss, name='train')
 
     @staticmethod
@@ -40,8 +40,8 @@ class SpotifyAutoEncoder:
             current_sum = 0
             count = 0
             for track in MongoClient().albart.tracks.find():
-                feature = self.json_to_spotify_feature(track)
-                loss, _ = self.sess.run([self.loss, self.training_decoder], feed_dict={self.x: [feature]})
+                feed_dict = {self.x: [self.json_to_spotify_feature(track)]}
+                loss, _ = self.sess.run([self.loss, self.train], feed_dict=feed_dict)
                 count += 1
                 current_sum += loss
             epoch_iterator.set_description('Epoch {} average training loss: {}'.format(e, current_sum / count))
