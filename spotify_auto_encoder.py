@@ -7,7 +7,7 @@ from tqdm import tqdm, trange
 class SpotifyAutoEncoder:
     spotify_feature_size = 35
     compressed_size = 8
-    epochs = 200
+    epochs = 10000
 
     def __init__(self):
         self.sess = tf.Session()
@@ -39,12 +39,19 @@ class SpotifyAutoEncoder:
         for e in epoch_iterator:
             current_sum = 0
             count = 0
-            for track in MongoClient().albart.tracks.find():
-                feed_dict = {self.x: [self.json_to_spotify_feature(track)]}
-                loss, _ = self.sess.run([self.loss, self.train], feed_dict=feed_dict)
-                count += 1
-                current_sum += loss
-            epoch_iterator.set_description('Epoch {} average training loss: {}'.format(e, current_sum / count))
+            try:
+                for track in MongoClient().albart.tracks.find():
+                    try:
+                        feed_dict = {self.x: [self.json_to_spotify_feature(track)]}
+                        loss, _ = self.sess.run([self.loss, self.train], feed_dict=feed_dict)
+                        count += 1
+                        current_sum += loss
+                    except Exception:
+                        continue
+            except Exception:
+                continue
+            finally:
+                epoch_iterator.set_description('Epoch {} average training loss: {}'.format(e, current_sum / count))
 
     @staticmethod
     def json_to_spotify_feature(json):
