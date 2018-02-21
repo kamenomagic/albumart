@@ -3,6 +3,8 @@ from pymongo import MongoClient
 import base64
 from matplotlib import pyplot as plt
 import cStringIO
+import numpy as np
+
 
 def main():
     mongo = MongoClient()
@@ -11,17 +13,10 @@ def main():
 
     test = albums.find()
     img = cStringIO.StringIO(base64.b64decode(test[1]["image"]))
-    img = Image.open(img)
-    plt.figure()
+    img = np.asarray(Image.open(img))
+    plt.figure(1)
     plt.imshow(img)
     plt.show()
-    print img
-
-
-
-
-
-
 
 
 if __name__ == '__main__':

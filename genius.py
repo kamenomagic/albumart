@@ -17,7 +17,7 @@ def main():
     location_exists = os.path.exists(init_file)
     if not location_exists:
         with open(init_file, "w+") as f:
-            f.write("mongo_start_idx:None")
+            f.write('mongo_start_idx:None')
     # Keep track of Mongo index of last track that lyrics were obtained for.
     # IDs greater than this will be tracks we still need lyrics for
     with open(init_file, "r") as f:
@@ -30,28 +30,28 @@ def main():
     for track in track_iterator:
         track_iterator.set_description('Track:  {:>100}'.format(track['name'].encode('ascii', 'ignore')))
         # Only add track lyrics we don't already have
-        if lyrics_coll.count({"_id": track["_id"]}) == 0:
+        if lyrics_coll.count({'_id': track['_id']}) == 0:
             song_lyr = g_api.search_song(track['name'], track['artists'][0]['name'])
 
             lyr_obj = dict()
             # Lyric IDs correspond to track IDs
-            lyr_obj["_id"] = track["_id"]
-            lyr_obj["artist"] = track['artists'][0]['name']
-            lyr_obj["track_name"] = track['name']
+            lyr_obj['_id'] = track['_id']
+            lyr_obj['artist'] = track['artists'][0]['name']
+            lyr_obj['track_name'] = track['name']
 
             if not song_lyr:
                 db.lyrics_failures.insert_one(lyr_obj)
             else:
-                lyr_obj["lyrics"] = song_lyr.lyrics
+                lyr_obj['lyrics'] = song_lyr.lyrics
                 lyrics_coll.insert_one(lyr_obj)
-        updated_idx = track["_id"]
+        updated_idx = track['_id']
         mongo_start_idx = str(updated_idx)
         idx += 1
         if idx % write_every == 0:
             with open(init_file, "w+") as f:
-                f.write("mongo_start_idx:" + mongo_start_idx)
+                f.write('mongo_start_idx:' + mongo_start_idx)
     with open(init_file, "w+") as f:
-        f.write("mongo_start_idx:" + mongo_start_idx)
+        f.write('mongo_start_idx:' + mongo_start_idx)
 
 
 if __name__ == '__main__':

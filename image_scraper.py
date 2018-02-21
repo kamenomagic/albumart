@@ -5,7 +5,6 @@ import base64
 import cStringIO
 from tqdm import tqdm
 import urllib2
-import bson
 
 init_file = 'image_scraper_init.txt'
 write_every = 100
@@ -20,8 +19,8 @@ def main():
     if not location_exists:
         with open(init_file, "w+") as f:
             f.write("start_idx:None")
-    # Keep track of Mongo index of last track that lyrics were obtained for.
-    # IDs greater than this will be tracks we still need lyrics for
+    # Keep track of Mongo index of last track that img was obtained for.
+    # IDs greater than this will be tracks we still need img of
     with open(init_file, "r") as f:
         start_idx = f.read().split(":")[1]
         if start_idx == "None":
