@@ -12,7 +12,8 @@ class SpotifyAutoEncoder:
     model_directory = './spotify_encoder_trained_model'
 
     def __init__(self):
-        self.sess = tf.Session()
+        gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.333)
+        self.sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
         self.x = tf.placeholder(tf.float64, [1, self.spotify_feature_size], name='x')
         self.encoded_x = tf.placeholder(tf.float64, [1, self.compressed_size], name='encoded_x')
         encoder0 = tf.layers.dense(self.x, 128, activation=tf.nn.relu, name='encoder0')
