@@ -77,7 +77,7 @@ class SpotifyAutoEncoder:
         return self.sess.run(self.encoder, feed_dict={self.x: spotify_feature})
 
     def decode(self, encoded_spotify_feature):
-        return self.sess.run(self.encoder, feed_dict={self.encoded_x: encoded_spotify_feature})
+        return self.sess.run(self.decoder, feed_dict={self.encoded_x: encoded_spotify_feature})
 
     @staticmethod
     def json_to_spotify_feature(json):
