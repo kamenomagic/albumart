@@ -13,7 +13,7 @@ class ImageAutoEncoder:
     compressed_size = 256
     model_directory = './image_encoder_trained_model'
 
-    def _init_(self):
+    def __init__(self):
         gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.333)
         self.sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
         self.x = tf.placeholder(tf.float32, self.input_size, name='x')
