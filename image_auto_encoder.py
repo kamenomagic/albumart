@@ -1,5 +1,6 @@
 import tensorflow as tf
 import numpy as np
+import os
 from pymongo import MongoClient
 import cStringIO
 import base64
@@ -10,6 +11,7 @@ class ImageAutoEncoder:
     epochs = 25
     input_size = [1, 300, 300, 3]
     compressed_size = 256
+    model_directory = './image_encoder_trained_model'
 
     def _init_(self):
         self.sess = tf.Session()
@@ -31,6 +33,14 @@ class ImageAutoEncoder:
         self.decoder = self.build_decoder(self.encoded_x, self.input_size)
         self.loss = tf.reduce_sum(tf.abs(self.x - self.training_decoder), name='loss')
         self.train = tf.train.AdamOptimizer().minimize(self.loss, name='train')
+        tf.add_to_collection('x', self.x)
+        tf.add_to_collection('encoded_x', self.encoded_x)
+        tf.add_to_collection('encoder', self.encoder)
+        tf.add_to_collection('decoder', self.decoder)
+        tf.add_to_collection('training_decoder', self.training_decoder)
+        tf.add_to_collection('loss', self.loss)
+        tf.add_to_collection('train', self.train)
+        self.saver = tf.train.Saver()
 
     @staticmethod
     def build_decoder(x, out_size, reuse=True):
@@ -48,8 +58,12 @@ class ImageAutoEncoder:
                                              activation=tf.nn.relu, name='deconv0')
         return deconv0
 
-    def start_training(self):
+    def start_training(self, load_existing_model=True):
         self.sess.run(tf.global_variables_initializer())
+        if load_existing_model and os.path.exists(self.model_directory):
+            self.load_trained_model()
+        else:
+            self.sess.run(tf.global_variables_initializer())
         epoch_iterator = trange(self.epochs)
         for e in epoch_iterator:
             current_sum = 0
@@ -69,12 +83,24 @@ class ImageAutoEncoder:
             except Exception:
                 continue
             finally:
+                self.save_trained_model()
                 epoch_iterator.set_description('Epoch {} average training loss: {}'.format(e, current_sum / count))
 
+    def save_trained_model(self):
+        self.saver.save(self.sess, os.path.join(self.model_directory, 'model'))
+
+    def load_trained_model(self):
+        self.saver.restore(self.sess, tf.train.latest_checkpoint(self.model_directory))
+
+    def encode(self, image):
+        return self.sess.run(self.encoder, feed_dict={self.x: image})
+
+    def decode(self, encoded_image):
+        return self.sess.run(self.encoder, feed_dict={self.encoded_x: encoded_image})
 
 def main():
     auto_encoder = ImageAutoEncoder()
-    auto_encoder.start_train()
+    auto_encoder.start_training()
 
 if __name__ == '__main__':
     main()
