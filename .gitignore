@@ -6,5 +6,5 @@ credentials.ini
 genius_init.txt
 .idea/
 image_scraper_init.txt
-spotify_encoder_trained_model
-image_encoder_trained_model/
+spotify_encoder_trained_model*
+image_encoder_trained_model*
