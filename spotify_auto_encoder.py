@@ -58,7 +58,7 @@ class SpotifyAutoEncoder:
         del results['_id']
         values = []
         for key, value in results.iteritems():
-            results[key] = value[0] if isinstance(value, list) else value
+            results[key] = (0.0 if len(value) == 0 else value[0]) if isinstance(value, list) else value
             results[key] = 0.0 if str(results[key]).isspace() or results[key] == '' else results[key]
         for key in template:
             values.append(results[key.split('.')[-1]])
