@@ -12,7 +12,7 @@ def get_soup(url,header):
     return BeautifulSoup(urllib2.urlopen(urllib2.Request(url,headers=header)),'html.parser')
 
 
-def get_images(q):
+def get_images(q, cnt):
     query = q
     image_type = query
     query= query.split()
@@ -30,7 +30,7 @@ def get_images(q):
     # print("there are total" , len(ActualImages),"images")
 
     images = []
-    for i , (img , Type) in enumerate( ActualImages[:10]):
+    for i , (img , Type) in enumerate( ActualImages[:cnt]):
         try:
             #req = urllib.request.Request(img)
             #raw_img = Image.open(urllib.request.urlopen(req))
@@ -48,7 +48,7 @@ def get_images(q):
 
 def main():
     query = "fire"
-    imgs = get_images(query)
+    imgs = get_images(query, 10)
     for img in imgs:
         plt.figure(1)
         plt.imshow(img)
