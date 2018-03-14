@@ -5,16 +5,17 @@ import sys
 import pymongo
 from pymongo import MongoClient
 from tqdm import tqdm, trange
-
+import traceback
 
 class SpotifyAutoEncoder:
     spotify_feature_size = 35
     compressed_size = 100
     epochs = 10000
     model_directory = './spotify_encoder_trained_model'
+    minimums = [-1.0, 0.0, -1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 4.12, 1.0, 22050, 1, 0.0, 0, 0.0, 0.0, 3.15, 0, 0.0, 0.0, 22050, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    maximums = [1.0, 145.35692, 2.048, 1.0, 4995.31424, 1.0, 0.0, 1.0, 4.12, 4978.86331, 22050, 1, 249.441, 0, 1.0, 11, 3.15, 0, 1, 5, 110146679, 6.275, 0.996, 1.0, 4995315, 1.0, 1.0, 11, 1.0, 6.275, 1, 0.969, 249.441, 5, 1.0]
 
     def __init__(self):
-        self.minimums, self.maximums = self.get_max_and_mins()
         self.difference = [1.0 if n == 0 else n for n in (
                 np.array(self.maximums) - np.array(self.minimums))]
         self.sess = tf.Session()
@@ -48,25 +49,6 @@ class SpotifyAutoEncoder:
         decoding = tf.layers.dense(decoder3, output_shape, activation=tf.nn.relu, reuse=reuse, name='decoder_out')
         return decoding
 
-    def get_max_or_min(self, maximum=True):
-        tracks = MongoClient().albart.tracks
-        template = self.json_to_spotify_feature(tracks.find_one(), True)
-        aggregator = {'_id': None}
-        for key in template:
-            aggregator[key.split('.')[-1]] = {'$max' if maximum else '$min': '$' + key}
-        results = tracks.aggregate([{'$group': aggregator}]).next()
-        del results['_id']
-        values = []
-        for key, value in results.iteritems():
-            results[key] = (0.0 if len(value) == 0 else value[0]) if isinstance(value, list) else value
-            results[key] = 0.0 if str(results[key]).isspace() or results[key] == '' else results[key]
-        for key in template:
-            values.append(results[key.split('.')[-1]])
-        return values
-
-    def get_max_and_mins(self):
-        return self.get_max_or_min(False), self.get_max_or_min(True)
-
     def start_training(self, load_existing_model=True):
         if load_existing_model and os.path.exists(self.model_directory):
             self.load_trained_model()
@@ -77,18 +59,20 @@ class SpotifyAutoEncoder:
             current_sum = 0
             count = 0
             try:
-                for track in MongoClient().albart.tracks.find():
+                for track in tqdm(MongoClient().albart.tracks.find(), total=MongoClient().albart.tracks.count()):
                     try:
                         feature = self.json_to_spotify_feature(track)
+                        if feature is None:
+                            continue
                         feed_dict = {self.x: [feature]}
                         loss, _ = self.sess.run([self.loss, self.train], feed_dict=feed_dict)
                         count += 1
                         current_sum += loss
                     except Exception as e:
-                        print e
+                        traceback.print_exc()
                         continue
             except Exception as e2:
-                print e2
+                traceback.print_exc()
                 continue
             finally:
                 self.save_trained_model()
@@ -114,6 +98,8 @@ class SpotifyAutoEncoder:
             if analysis[key] is not None and not isinstance(analysis[key], str):
                 spotify_feature.append("analysis." + key if return_key_structure else analysis[key])
         features = json['features'][0]
+        if features is None:
+            return None
         features['track_href'] = None
         features['analysis_url'] = None
         features['uri'] = None
