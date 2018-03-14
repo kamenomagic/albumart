@@ -62,6 +62,8 @@ class SpotifyAutoEncoder:
                 for track in tqdm(MongoClient().albart.tracks.find(), total=MongoClient().albart.tracks.count()):
                     try:
                         feature = self.json_to_spotify_feature(track)
+                        if feature is None:
+                            continue
                         feed_dict = {self.x: [feature]}
                         loss, _ = self.sess.run([self.loss, self.train], feed_dict=feed_dict)
                         count += 1
@@ -96,8 +98,9 @@ class SpotifyAutoEncoder:
             if analysis[key] is not None and not isinstance(analysis[key], str):
                 spotify_feature.append("analysis." + key if return_key_structure else analysis[key])
         features = json['features'][0]
-        if 'track_href' in features:
-            features['track_href'] = None
+        if features is None:
+            return None
+        features['track_href'] = None
         features['analysis_url'] = None
         features['uri'] = None
         features['type'] = None
