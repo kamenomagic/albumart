@@ -96,7 +96,8 @@ class SpotifyAutoEncoder:
             if analysis[key] is not None and not isinstance(analysis[key], str):
                 spotify_feature.append("analysis." + key if return_key_structure else analysis[key])
         features = json['features'][0]
-        features['track_href'] = None
+        if 'track_href' in features:
+            features['track_href'] = None
         features['analysis_url'] = None
         features['uri'] = None
         features['type'] = None
