@@ -77,7 +77,7 @@ class SpotifyAutoEncoder:
             current_sum = 0
             count = 0
             try:
-                for track in MongoClient().albart.tracks.find():
+                for track in tqdm(MongoClient().albart.tracks.find(), total=MongoClient().albart.tracks.count()):
                     try:
                         feature = self.json_to_spotify_feature(track)
                         feed_dict = {self.x: [feature]}
