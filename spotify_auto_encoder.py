@@ -5,7 +5,7 @@ import sys
 import pymongo
 from pymongo import MongoClient
 from tqdm import tqdm, trange
-
+import traceback
 
 class SpotifyAutoEncoder:
     spotify_feature_size = 35
@@ -85,10 +85,10 @@ class SpotifyAutoEncoder:
                         count += 1
                         current_sum += loss
                     except Exception as e:
-                        print e
+                        traceback.print_exc()
                         continue
             except Exception as e2:
-                print e2
+                traceback.print_exc()
                 continue
             finally:
                 self.save_trained_model()
