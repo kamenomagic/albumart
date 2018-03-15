@@ -19,8 +19,8 @@ class SpotifyAutoEncoder:
         self.difference = [1.0 if n == 0 else n for n in (
                 np.array(self.maximums) - np.array(self.minimums))]
         self.sess = tf.Session()
-        self.x = tf.placeholder(tf.float64, [1, self.spotify_feature_size], name='x')
-        self.encoded_x = tf.placeholder(tf.float64, [1, self.compressed_size], name='encoded_x')
+        self.x = tf.placeholder(tf.float64, [None, self.spotify_feature_size], name='x')
+        self.encoded_x = tf.placeholder(tf.float64, [None, self.compressed_size], name='encoded_x')
         encoder0 = tf.layers.dense(self.x, self.compressed_size, activation=tf.nn.relu, name='encoder0')
         encoder1 = tf.layers.dense(encoder0, self.compressed_size, activation=tf.nn.relu, name='encoder1')
         encoder2 = tf.layers.dense(encoder1, self.compressed_size, activation=tf.nn.relu, name='encoder2')
@@ -58,13 +58,30 @@ class SpotifyAutoEncoder:
         for e in epoch_iterator:
             current_sum = 0
             count = 0
+            batch_size = 128
+            batch_count = 0
+            batch = []
             try:
                 for track in tqdm(MongoClient().albart.tracks.find(), total=MongoClient().albart.tracks.count()):
-                    try:
+                    if batch_count == batch_size:
+                        try:
+                            feed_dict = {self.x: batch}
+                            loss, _ = self.sess.run([self.loss, self.train], feed_dict=feed_dict)
+                            count += 1
+                            current_sum += loss
+                            batch_count = 0
+                        except Exception as e:
+                            traceback.print_exc()
+                            continue
+                    else:
                         feature = self.json_to_spotify_feature(track)
                         if feature is None:
                             continue
-                        feed_dict = {self.x: [feature]}
+                        batch.append(feature)
+                        batch_count += 1
+                if len(batch) > 0:
+                    try:
+                        feed_dict = {self.x: batch}
                         loss, _ = self.sess.run([self.loss, self.train], feed_dict=feed_dict)
                         count += 1
                         current_sum += loss
@@ -76,7 +93,7 @@ class SpotifyAutoEncoder:
                 continue
             finally:
                 self.save_trained_model()
-                epoch_iterator.set_description('Epoch {} average training loss: {}'.format(e, current_sum / count))
+                epoch_iterator.set_description('Epoch {} average training loss: {}'.format(e, (current_sum / count) / batch_size))
 
     def save_trained_model(self):
         self.saver.save(self.sess, os.path.join(self.model_directory, 'model'))
