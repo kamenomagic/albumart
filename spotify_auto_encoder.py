@@ -63,13 +63,14 @@ class SpotifyAutoEncoder:
             batch = []
             try:
                 for track in tqdm(MongoClient().albart.tracks.find(), total=MongoClient().albart.tracks.count()):
-                    if batch_count == batch_size:
+                    if batch_count >= batch_size:
                         try:
                             feed_dict = {self.x: batch}
                             loss, _ = self.sess.run([self.loss, self.train], feed_dict=feed_dict)
                             count += 1
                             current_sum += loss
                             batch_count = 0
+                            batch = []
                         except Exception as e:
                             traceback.print_exc()
                             continue
