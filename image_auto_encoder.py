@@ -7,7 +7,6 @@ import cStringIO
 import base64
 from PIL import Image
 from tqdm import tqdm, trange
-from matplotlib import pyplot as plt
 
 
 def lrelu(x, alpha=0.1):
@@ -80,10 +79,22 @@ class ImageAutoEncoder:
         for epoch in epoch_iterator:
             current_sum = 0
             count = 0
+            batch_size = 10
+            batch_count = 0
+            batch = []
             try:
-                albums = MongoClient().albart.albums.find()
-                for album in albums:
-                    try:
+                for album in tqdm(MongoClient().albart.albums.find(), total=MongoClient().albart.albums.count()):
+                    if batch_count >= batch_size:
+                        try:
+                            feed_dict = {self.x: batch}
+                            loss, _ = self.sess.run([self.cost, self.train], feed_dict=feed_dict)
+                            count += 1
+                            current_sum += loss
+                            batch_count = 0
+                            batch = []
+                        except Exception as fail:
+                            continue
+                    else:
                         img = cStringIO.StringIO(base64.b64decode(album["image"]))
                         img = Image.open(img)
                         # buff = io.BytesIO(base64.b64decode(album["image"]))
@@ -92,23 +103,21 @@ class ImageAutoEncoder:
                         img.thumbnail((128, 128), Image.ANTIALIAS)
                         resized_img = np.asarray(img)
                         resized_img = resized_img / 255.0
-                        feed_dict = {self.x: [resized_img]}
-                        loss, _ = self.sess.run([self.cost, self.train], feed_dict=feed_dict)
+                        batch.append(resized_img)
+                        batch_count += 1
+                if len(batch) > 0:
+                    try:
+                        feed_dict = {self.x: batch}
+                        loss, _ = self.sess.run([self.loss, self.train], feed_dict=feed_dict)
                         count += 1
                         current_sum += loss
-                        # dec_img = self.sess.run(self.training_decoder, feed_dict=feed_dict)
-                        # dec_img.resize([128, 128, 3])
-                        # dec_img = np.clip(dec_img, 0.0, 1.0)
-                        # plt.figure(1)
-                        # plt.imshow(dec_img)
-                        # plt.show()
                     except Exception as fail:
                         continue
             except Exception as fail:
                 continue
             finally:
                 self.save_trained_model()
-                epoch_iterator.set_description('Epoch {} average training loss: {}'.format(epoch, current_sum / count))
+                epoch_iterator.set_description('Epoch {} average training loss: {}'.format(epoch, (current_sum / count) / batch_size))
 
     def save_trained_model(self):
         self.saver.save(self.sess, os.path.join(self.model_directory, 'model'))
