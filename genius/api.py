@@ -151,10 +151,14 @@ class Genius(_API):
         #else:
         #    print('Searching for "{0}"...'.format(song_title))
         search_term = song_title + ' ' + artist_name
-        json_search = self._make_api_request((search_term,'search'))        
+        json_search = self._make_api_request((search_term,'search'))
+
+        artist_name = self._clean_string(artist_name)
+        song_title = self._clean_string(song_title)
                 
         # Loop through search results, stopping as soon as title and artist of result match request
         n_hits = min(10,len(json_search['hits']))
+        print("Song title:  " + song_title)
         for i in range(n_hits):
             search_hit = json_search['hits'][i]['result']
             found_title = self._clean_string(search_hit['title'])
@@ -164,8 +168,16 @@ class Genius(_API):
             # Below added by Wes, accept song as a match if either artist's name or found artist's name
             # are subsets of the other. Same for song title. Spotify had "Michelle Williams",
             # and Genius had "Michelle Ingrid Williams"
-            artist_match = (found_artist == self._clean_string(artist_name)) or self.str1_contains_str2(found_artist, artist_name) or self.str1_contains_str2(artist_name, found_artist)
-            title_match = (found_title == self._clean_string(song_title)) or self.str1_contains_str2(found_title, song_title) or self.str1_contains_str2(song_title, found_title)
+            perfect_artist_match = (found_artist == artist_name)
+            perfect_title_match = (found_title == song_title)
+
+            contains_artist_match = self.str1_contains_str2(found_artist, artist_name) or self.str1_contains_str2(artist_name, found_artist)
+            contains_title_match = self.str1_contains_str2(found_title, song_title) or self.str1_contains_str2(song_title, found_title)
+
+            artist_match = perfect_artist_match or contains_artist_match
+            title_match = perfect_title_match or contains_title_match
+
+            print(found_title)
             # --------------------------------------------------------------------
             if artist_match and title_match:
                 # Found correct song, accessing API ID
@@ -178,10 +190,10 @@ class Genius(_API):
                 song = Song(json_song, lyrics)
                                 
         #        print('Done.')
-                return song
+                return song, perfect_artist_match, perfect_title_match
         
         print('Specified song was not first result :(')
-        return None
+        return None, False, False
         
     def search_artist(self, artist_name, verbose=True, max_songs=None):
         """Allow user to search for an artist on the Genius.com database by supplying an artist name.
@@ -247,8 +259,8 @@ class Genius(_API):
         return artist
 
     def str1_contains_str2(self, str1, str2):
-        str1 = self._clean_string(str1)
-        str2 = self._clean_string(str2)
+        #str1 = self._clean_string(str1)
+        #str2 = self._clean_string(str2)
 
         for name in str2.split():
             if name not in str1:

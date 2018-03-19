@@ -12,11 +12,12 @@ def main():
     albums = db.albums
 
     test = albums.find()
-    img = cStringIO.StringIO(base64.b64decode(test[1]["image"]))
-    img = np.asarray(Image.open(img))
-    plt.figure(1)
-    plt.imshow(img)
-    plt.show()
+    for album in test:
+        img = cStringIO.StringIO(base64.b64decode(album["image"]))
+        img = np.asarray(Image.open(img))
+        plt.figure(1)
+        plt.imshow(img)
+        plt.show()
 
 
 if __name__ == '__main__':

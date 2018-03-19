@@ -29,21 +29,24 @@ def main():
     track_iterator = tqdm(tracks.find({'_id': {'$gte': mongo_start_idx}}))
     for track in track_iterator:
         track_iterator.set_description('Track:  {:>100}'.format(track['name'].encode('ascii', 'ignore')))
+
         # Only add track lyrics we don't already have
         if lyrics_coll.count({'_id': track['_id']}) == 0:
-            song_lyr = g_api.search_song(track['name'], track['artists'][0]['name'])
-
+            api_result, perf_artist_match, perf_title_match = g_api.search_song(track['name'], track['artists'][0]['name'])
             lyr_obj = dict()
             # Lyric IDs correspond to track IDs
             lyr_obj['_id'] = track['_id']
             lyr_obj['artist'] = track['artists'][0]['name']
             lyr_obj['track_name'] = track['name']
+            lyr_obj['perfect_artist_match'] = perf_artist_match
+            lyr_obj['perfect_title_match'] = perf_title_match
 
-            if not song_lyr:
+            if not api_result:
                 db.lyrics_failures.insert_one(lyr_obj)
             else:
-                lyr_obj['lyrics'] = song_lyr.lyrics
+                lyr_obj['lyrics'] = api_result.lyrics
                 lyrics_coll.insert_one(lyr_obj)
+                print("6")
         updated_idx = track['_id']
         mongo_start_idx = str(updated_idx)
         idx += 1
