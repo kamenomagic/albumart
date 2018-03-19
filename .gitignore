@@ -10,3 +10,4 @@ spotify_encoder_trained_model*
 image_encoder_trained_model*
 logs/
 test_imgs/
+graphs/
