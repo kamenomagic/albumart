@@ -5,6 +5,7 @@ import base64
 import cStringIO
 from tqdm import tqdm
 import urllib2
+from bson import ObjectId
 
 init_file = 'image_scraper_init.txt'
 write_every = 100
@@ -22,9 +23,11 @@ def main():
     # Keep track of Mongo index of last track that img was obtained for.
     # IDs greater than this will be tracks we still need img of
     with open(init_file, "r") as f:
-        start_idx = f.read().split(":")[1]
+        start_idx = f.read().split(":")[1].strip()
         if start_idx == "None":
             start_idx = tracks.find_one()["_id"]
+        else:
+            start_idx = ObjectId(start_idx)
 
     idx = 0
     track_iterator = tqdm(tracks.find({'_id': {'$gte': start_idx}}))
@@ -58,9 +61,9 @@ def main():
         idx += 1
         if idx % write_every == 0:
             with open(init_file, "w+") as f:
-                f.write("start_idx:" + start_idx)
+                f.write("start_idx:" + str(start_idx))
     with open(init_file, "w+") as f:
-        f.write("start_idx:" + start_idx)
+        f.write("start_idx:" + str(start_idx))
 
 
 if __name__ == '__main__':
