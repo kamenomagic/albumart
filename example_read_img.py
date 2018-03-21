@@ -11,7 +11,8 @@ def main():
     db = mongo.albart
     albums = db.albums
 
-    test = albums.find()
+    srch_dict = {'artist': 'AC/DC'}
+    test = albums.find(srch_dict)
     for album in test:
         img = cStringIO.StringIO(base64.b64decode(album["image"]))
         img = np.asarray(Image.open(img))
