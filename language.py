@@ -3,6 +3,7 @@ import spacy
 from spacy.lemmatizer import Lemmatizer
 from spacy.lang.en import LEMMA_INDEX, LEMMA_EXC, LEMMA_RULES
 
+
 class Language:
     def __init__(self):
         self.nlp = spacy.load('en')
@@ -20,21 +21,20 @@ class Language:
                 else:
                     counts[lemmatized_noun] = 1
                     ordered_keys.append(lemmatized_noun)
-        # sorted_by_value = [key for key, value in sorted(count.iteritems(), key=lambda (k,v): (v,k))]
         result = []
         for key in ordered_keys:
-            if len(result)  == 0:
+            if len(result) == 0:
                 result.append(key)
             else:
                 inserted = False
                 for i, compare_key in enumerate(result):
                     if counts[compare_key] < counts[key]:
-                        result.insert(key, i)
+                        result.insert(i, key)
                         inserted = True
+                        break
                 if not inserted:
                     result.append(key)
         return [str(word) for word in result]
-
 
 
 if __name__ == '__main__':
