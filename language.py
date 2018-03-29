@@ -9,18 +9,25 @@ class Language:
         self.nlp = spacy.load('en')
         self.lemmatizer = Lemmatizer(LEMMA_INDEX, LEMMA_EXC, LEMMA_RULES)
 
+    def lemmatize(self, token):
+        return self.lemmatizer(token.text, token.pos_)[0]
+
     def get_top_nouns(self, text):
         doc = self.nlp(unicode(text, 'utf-8'))
         ordered_keys = []
         counts = {}
         for token in doc:
             if token.pos_ == 'NOUN':
-                lemmatized_noun = self.lemmatizer(token.text, token.pos_)[0]
-                if lemmatized_noun in counts:
-                    counts[lemmatized_noun] += 1
-                else:
-                    counts[lemmatized_noun] = 1
-                    ordered_keys.append(lemmatized_noun)
+                word_key = (token.text, self.lemmatize(token))
+                inserted = False
+                for word in counts.keys():
+                    if word[1] == word_key[1]:
+                        counts[word] += 1
+                        inserted = True
+                        break
+                if not inserted:
+                    counts[word_key] = 1
+                    ordered_keys.append(word_key)
         result = []
         for key in ordered_keys:
             if len(result) == 0:
@@ -34,8 +41,8 @@ class Language:
                         break
                 if not inserted:
                     result.append(key)
-        return [str(word) for word in result]
+        return [str(word[0]) for word in result]
 
 
 if __name__ == '__main__':
-    print(Language().get_top_nouns('Hello friend, you are a cat and I am a bird, and cat\'s and birds are my best friends!'))
+    print(Language().get_top_nouns('Hello friend, you are a cat and I am a bird, and birds and turtles are my best friends!'))
