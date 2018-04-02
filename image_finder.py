@@ -16,14 +16,14 @@ class ImageFinder:
 
     def find(self, lyrics, limit=None):
         nouns = self.language.get_top_nouns(lyrics)
-        return [self.get_images(noun, 1)[0] for noun in nouns[:len(nouns) if limit is None else limit]]
+        return [(self.get_images(noun, 1)[0], noun) for noun in nouns[:len(nouns) if limit is None else limit]]
 
     @staticmethod
     def get_images(q, cnt):
         query = q
         query = query.split()
         query = '+'.join(query)
-        url = "https://www.google.co.in/search?q=" + query + "&source=lnms&tbm=isch"
+        url = "https://www.google.co.in/search?q=" + query + "+stock+photo&source=lnms&tbm=isch"
 
         header = {
             'User-Agent': "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.134 Safari/537.36"}
@@ -101,9 +101,10 @@ def main():
              "yeah\n\nThis is the greatest show (Oh!)\nThis is the greatest show (Oh!)\nThis is the greatest show (" \
              "Oh!)\nThis is the greatest show (Oh!)\nThis is the greatest show (Oh!)\nThis is the greatest show (" \
              "Oh!)\n(This is the greatest show)\nThis is the greatest show (Oh!)\nThis is the greatest show! "
-    for image in image_finder.find(lyrics, 4):
+    for image_noun in image_finder.find(lyrics, 4):
+        print(image_noun[1])
         plt.figure(1)
-        plt.imshow(image)
+        plt.imshow(image_noun[0])
         plt.show()
 
 
