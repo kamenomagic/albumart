@@ -48,11 +48,25 @@ def get_images(q, cnt):
 
 def main():
     query = "fire"
-    imgs = get_images(query, 10)
-    for img in imgs:
-        plt.figure(1)
-        plt.imshow(img)
-        plt.show()
+    fires = get_images(query, 10)
+    index = input("Select an image index (0-{}): ".format(len(fires) - 1))
+    fire = Image.fromarray(fires[index])
+    trees = get_images("tree", 10)
+    index = input("Select an image index (0-{}): ".format(len(trees) - 1))
+    tree = Image.fromarray(trees[index])
+    src = fire.split()
+    mask = src[0].point(lambda i: i > 200 and 255)
+    pixels = fire.load()
+    mask_data = mask.load()
+    for i in range(fire.size[0]):
+        for j in range(fire.size[1]):
+            if mask_data[i, j] == 0:
+                pixels[i, j] = (128, 128, 128)
+    img = Image.blend(fire, tree, 0.4)
+
+    plt.figure(1)
+    plt.imshow(img)
+    plt.show()
 
 
 if __name__=='__main__':
