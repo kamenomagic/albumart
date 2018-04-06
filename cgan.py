@@ -8,15 +8,14 @@ import cStringIO
 import base64
 from PIL import Image
 import random
-import pprint
-import PIL
-import skimage.io
-import skimage.transform
+import os
 
 
 class CGAN:
-    def __init__(self):
-        self.dim_img = 128
+    def __init__(self, sess, dim_img=128, n_batches=10000, batch_size=8, model_dir="./cgan_model"):
+        self.sess = sess
+        self.dim_img = dim_img
+        self.model_dir = model_dir
 
         self.dim_clas = 8
         self.dim_enc_img = 192
@@ -24,18 +23,18 @@ class CGAN:
         self.dim_z = self.dim_rand  # + self.dim_enc_img + self.dim_clas  # Dimension of latent z space (size of inputs to generator)
         self.n_filters = 256
 
-        self.LR = 0.0001
-        self.lr_d = 0.0001
-        self.n_batches = 15000
-        self.batch_size = 4  # 8
+        self.LR = 0.001  # 0.005
+        self.lr_d = 0.005  # 0.01
+        self.n_batches = n_batches
+        self.batch_size = batch_size  # 4
         self.dis_iters = 5  # discriminator iterations for every generator iteration
         self.lmbda = 10  # gradient penalty multiplier
         # Adam Optimizer parameters
         self.beta1 = 0.5
         self.beta2 = 0.9
         self.n_channels = 3
-        self.song_auto_encoder = spotify_auto_encoder.SpotifyAutoEncoder()
-        self.song_auto_encoder.load_trained_model()
+        #self.song_auto_encoder = spotify_auto_encoder.SpotifyAutoEncoder()
+        #self.song_auto_encoder.load_trained_model()
         self.img_auto_encoder = image_auto_encoder.ImageAutoEncoder()
         #self.img_auto_encoder.load_trained_model()
         self.mongodb = MongoClient().albart
@@ -78,6 +77,28 @@ class CGAN:
                 self.dis_cost, var_list=self.dis_var_list)
             self.gen_train_op = tf.train.AdamOptimizer(learning_rate=self.LR, beta1=self.beta1, beta2=self.beta2, name='g_adam').minimize(
                 self.gen_cost, var_list=self.gen_var_list)
+
+        #  self.create_vars_collection()
+        self.saver = tf.train.Saver(self.dis_var_list + self.gen_var_list)
+
+    def init_model(self):
+        if os.path.exists(self.model_dir) and os.listdir(self.model_dir) != []:
+            self.load_model()
+            print "loaded model"
+        else:
+            self.train()
+
+    def create_vars_collection(self):
+        for var in self.dis_var_list:
+            tf.add_to_collection(var.name, var)
+        for var in self.gen_var_list:
+            tf.add_to_collection(var.name, var)
+
+    def load_model(self):
+        self.saver.restore(self.sess, tf.train.latest_checkpoint(self.model_dir))
+
+    def save_model(self):
+        self.saver.save(self.sess, os.path.join(self.model_dir, 'model'))
 
     def whiten_data(self, data, mean, std_dev):
         if mean is None:
@@ -167,9 +188,10 @@ class CGAN:
     def generator(self, noise=None):
         if noise is None:
             raise Exception()
+        new_dim = self.dim_img / 16
 
-        fc0 = self.fc(noise, 16 * 16 * self.n_filters, use_relu=False, name="gen_fc")
-        fc0_reshape = tf.reshape(fc0, [int(fc0.shape[0]), 16, 16, self.n_filters], name="gen_fc_rs")
+        fc0 = self.fc(noise, new_dim * new_dim * self.n_filters, use_relu=False, name="gen_fc")
+        fc0_reshape = tf.reshape(fc0, [int(fc0.shape[0]), new_dim, new_dim, self.n_filters], name="gen_fc_rs")
         conv_t0 = self.conv_transpose(fc0_reshape, name="gen_conv_t0")
         conv_t1 = self.conv_transpose(conv_t0, name="gen_conv_t1")
         conv_t2 = self.conv_transpose(conv_t1, name="gen_conv_t2")
@@ -186,17 +208,16 @@ class CGAN:
         images = np.zeros((self.batch_size, self.dim_img, self.dim_img, self.n_channels))
         encoded_tracks = np.zeros((self.batch_size, self.dim_clas))
 
-        track_cursor = self.sample_tracks(self.batch_size)
+        album_cursor = self.sample_albums(self.batch_size)
         index = 0
-        for track in track_cursor:
-            album = self.mongodb.albums.find_one({"_id": track["album_id"]})
+        for album in album_cursor:
             img = cStringIO.StringIO(base64.b64decode(album["image"]))
             img = Image.open(img)
             img = img.resize((self.dim_img, self.dim_img))
             img = np.array(img)
             images[index] = img
-            features = self.song_auto_encoder.json_to_spotify_feature(track)
-            encoded_tracks[index] = self.song_auto_encoder.encode(features.reshape((1, features.shape[0])))
+            #features = self.song_auto_encoder.json_to_spotify_feature(track)
+            #encoded_tracks[index] = self.song_auto_encoder.encode(features.reshape((1, features.shape[0])))
             index += 1
             if index == self.batch_size:
                 break
@@ -242,14 +263,22 @@ class CGAN:
         my_class = tf.get_default_graph().get_tensor_by_name('gan_vars/clas:0')
         #noise_class = tf.concat([noise, my_class], 1)
         gen = self.generator(noise=noise)
+        gen = ((gen / 2) + 0.5) * 255
         if summarize:
             summary = tf.summary.image("gen_img_", tf.reshape(gen[0], [1, self.dim_img, self.dim_img, self.n_channels]))
             return summary
         return gen
 
-    def sample_tracks(self, n):
+    def get_gen_imgs(self):
+        with tf.variable_scope("gan_vars", reuse=True) as scope:
+            _, noize, enc_tracks = self.gen_dis_inputs()
+            imgs = self.sess.run(self.call_generator(self.batch_size, self.dim_z, summarize=False),
+                             {self.noise: noize, self.clas: enc_tracks})
+        return imgs
+
+    def sample_albums(self, n):
         # Mongo "$sample" is erroring out with a small sample size, so sample more and just take what we need
-        return self.mongodb.tracks.aggregate([{"$sample": {"size": 20 + n}}])
+        return self.mongodb.albums.aggregate([{"$match": {"genres": "rap"}}, {"$sample": {"size": 20 + n}}])
 
     def gen_dis_inputs(self):
         imgs, enc_tracks = self.get_rand_imgs()
@@ -263,25 +292,25 @@ class CGAN:
     def train(self):
         time_str = time.strftime("%d%b%Y-%H:%M:%S", time.gmtime())
         with tf.variable_scope("gan_vars", reuse=True) as scope:
-            with tf.Session() as sess:  # config=tf.ConfigProto(device_count={'GPU': 0})
-                writer = tf.summary.FileWriter('./logs/' + time_str)
-                sess.run(tf.global_variables_initializer())
+            writer = tf.summary.FileWriter('./logs/' + time_str)
+            self.sess.run(tf.global_variables_initializer())
 
-                for i in range(self.n_batches):
-                    print(str(i) + " of " + str(self.n_batches))
-                    self.train_batch(sess)
-                    # Used to track progress of generator, write a generated image to Tensorboard summary
-                    if i % 10 == 0:
-                        _, noize, enc_tracks = self.gen_dis_inputs()
-                        summary = sess.run(self.call_generator(self.batch_size, self.dim_z, summarize=True),
-                                        {self.noise: noize, self.clas: enc_tracks})
-                        writer.add_summary(summary, i)
+            for i in range(self.n_batches):
+                print(str(i) + " of " + str(self.n_batches))
+                self.train_batch()
+                # Used to track progress of generator, write a generated image to Tensorboard summary
+                if i % 100 == 0:
+                    self.save_model()
+                    _, noize, enc_tracks = self.gen_dis_inputs()
+                    summary = self.sess.run(self.call_generator(self.batch_size, self.dim_z, summarize=True),
+                                    {self.noise: noize, self.clas: enc_tracks})
+                    writer.add_summary(summary, i)
 
-    def train_batch(self, sess):
+    def train_batch(self):
         # Run "dis_iters" discriminator iterations for each 1 generator iteration
         for j in range(self.dis_iters):
             imgs, noize, enc_tracks = self.gen_dis_inputs()
-            d_cost, _ = sess.run([self.dis_cost, self.dis_train_op],
+            d_cost, _ = self.sess.run([self.dis_cost, self.dis_train_op],
                                  feed_dict={self.real_data: imgs, self.noise: noize,
                                             self.clas: enc_tracks, self.real_clas: enc_tracks})
             print("d_cost:" + str(d_cost))
@@ -289,7 +318,7 @@ class CGAN:
                 dis_loss_vs_time = d_cost
 
         _, noize, enc_tracks = self.gen_dis_inputs()
-        g_cost, _ = sess.run([self.gen_cost, self.gen_train_op], feed_dict={self.noise: noize,
+        g_cost, _ = self.sess.run([self.gen_cost, self.gen_train_op], feed_dict={self.noise: noize,
                                                                             self.clas: enc_tracks})
         print("g_cost:" + str(g_cost))
         #gen_loss_vs_time[i] = g_cost
@@ -297,10 +326,11 @@ class CGAN:
 
 
 
-
 def main():
-    cgan = CGAN()
-    cgan.train()
+    with tf.Session() as sess:
+        cgan = CGAN(sess)
+        cgan.train()
+        # config=tf.ConfigProto(device_count={'GPU': 0})
 
 
 if __name__ == '__main__':

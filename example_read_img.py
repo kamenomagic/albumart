@@ -14,7 +14,7 @@ def main():
     srch_dict = {}
     search = albums.find(srch_dict)
     dataset = []
-    color = [0, 0, 255]
+    color = [0, 0, 0]
     for album in search:
         img = cStringIO.StringIO(base64.b64decode(album["image"]))
         img = np.asarray(Image.open(img))
@@ -22,12 +22,12 @@ def main():
         if np.sum(np.absolute(test - color)) < 260:
             dataset.append(img)
     print(len(dataset))
-    """
+
     for entry in dataset:
         plt.figure(1)
         plt.imshow(entry)
         plt.show()
-    """
+
 
 if __name__ == '__main__':
     main()
