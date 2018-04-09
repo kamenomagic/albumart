@@ -9,6 +9,8 @@ from PIL import Image
 from matplotlib import pyplot as plt
 from language import Language
 
+debug = True
+
 
 class ImageFinder:
     def __init__(self):
@@ -16,24 +18,45 @@ class ImageFinder:
 
     def find(self, lyrics, limit=None):
         nouns = self.language.get_top_nouns(lyrics)
-        return [(self.get_images(noun, 1)[0], noun) for noun in nouns[:len(nouns) if limit is None else limit]]
+        limited_nouns = nouns[:len(nouns) if limit is None or limit >= len(nouns) else limit]
+        if debug:
+            print('Nouns: ' + ','.join(nouns))
+            if limit is not None:
+                print('Limiting to ({}): {}'.format(limit, ','.join(limited_nouns)))
+        images = []
+        for noun in limited_nouns:
+            try:
+                images.append((self.get_images(noun, 1)[0], noun))
+            except:
+                pass
+        return images
 
     @staticmethod
     def get_images(q, cnt):
         query = q
+        if debug:
+            print('Query: ' + q)
         query = query.split()
         query = '+'.join(query)
-        url = "https://www.google.co.in/search?q=" + query + "+stock+photo&source=lnms&tbm=isch&tbs=ic:trans"
+        url = "https://www.google.com/search?q=" + query + "&source=lnms&tbm=isch&tbs=itp:clipart,ic:trans"
+        if debug:
+            print('Query url: ' + url)
 
         header = {
             'User-Agent': "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.134 Safari/537.36"}
+        if debug:
+            print('Making request...')
         soup = BeautifulSoup(urllib2.urlopen(urllib2.Request(url, headers=header)), 'html.parser')
 
+        if debug:
+            print('Parsing response...')
         actual_images = []
         for a in soup.find_all("div", {"class": "rg_meta"}):
             link, Type = json.loads(a.text)["ou"], json.loads(a.text)["ity"]
             actual_images.append((link, Type))
 
+        if debug:
+            print('Processing images...')
         images = []
         for i, (img, Type) in enumerate(actual_images[:cnt]):
             try:
@@ -46,6 +69,7 @@ class ImageFinder:
                 images.append(np.asarray(raw_img))
             except Exception as e:
                 print("could not load : ", img)
+        print('Finished query.')
         return images
 
 
@@ -101,11 +125,15 @@ def main():
              "yeah\n\nThis is the greatest show (Oh!)\nThis is the greatest show (Oh!)\nThis is the greatest show (" \
              "Oh!)\nThis is the greatest show (Oh!)\nThis is the greatest show (Oh!)\nThis is the greatest show (" \
              "Oh!)\n(This is the greatest show)\nThis is the greatest show (Oh!)\nThis is the greatest show! "
-    for image_noun in image_finder.find(lyrics, 4):
-        print(image_noun[1])
-        plt.figure(1)
-        plt.imshow(image_noun[0])
-        plt.show()
+    for image_noun in image_finder.find(lyrics, 5):
+        try:
+            print(image_noun[1])
+            plt.figure(1)
+            plt.savefig('test.png')
+            plt.imshow(image_noun[0])
+            plt.show()
+        except:
+            pass
 
 
 if __name__ == '__main__':
