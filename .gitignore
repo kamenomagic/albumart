@@ -14,3 +14,4 @@ test_imgs/
 graphs/
 *~
 test.png
+cgan_model

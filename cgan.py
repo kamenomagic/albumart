@@ -247,16 +247,16 @@ class CGAN:
         img = np.asarray(img)
         return img.flatten()
 
-    def get_seed_imgs(self):
-        # Use NLP to get related images here.
-        imgs = np.zeros((self.batch_size, self.dim_enc_img))
-        for i in range(self.batch_size):
-            index = random.randint(0, 4)
-            img = Image.open("test_imgs/" + str(index) + ".jpeg")
-            img = img.resize((self.dim_img, self.dim_img))
-            #img = np.array(img)
-            imgs[i] = self.fake_encode_img(img)
-        return imgs
+    # def get_seed_imgs(self):
+    #     # Use NLP to get related images here.
+    #     imgs = np.zeros((self.batch_size, self.dim_enc_img))
+    #     for i in range(self.batch_size):
+    #         index = random.randint(0, 4)
+    #         img = Image.open("test_imgs/" + str(index) + ".jpeg")
+    #         img = img.resize((self.dim_img, self.dim_img))
+    #         #img = np.array(img)
+    #         imgs[i] = self.fake_encode_img(img)
+    #     return imgs
 
     def call_generator(self, batch_size, dim_z, summarize=False):
         noise = tf.get_default_graph().get_tensor_by_name('gan_vars/noise:0')
@@ -282,8 +282,8 @@ class CGAN:
 
     def gen_dis_inputs(self):
         imgs, enc_tracks = self.get_rand_imgs()
-        enc_seed_imgs = self.get_seed_imgs()
-        gen_class = np.append(enc_seed_imgs, enc_tracks, axis=1)
+        # enc_seed_imgs = self.get_seed_imgs()
+        # gen_class = np.append(enc_seed_imgs, enc_tracks, axis=1)
         noize = np.random.uniform(-1.0, 1.0, (self.batch_size, self.dim_rand)).astype(np.float32)
         #noize = np.append(gen_class, noize, axis=1)
         imgs = 2 * ((imgs.astype(np.float32) / 255) - 0.5)
