@@ -19,6 +19,7 @@ tf.flags.DEFINE_integer('image_size', '256', 'image size, default: 256')
 def inference(model, img_in, img_out, size):
   graph = tf.Graph()
 
+  """
   with graph.as_default():
     with tf.gfile.FastGFile(img_in, 'rb') as f:
       image_data = f.read()
@@ -26,12 +27,13 @@ def inference(model, img_in, img_out, size):
       input_image = tf.image.resize_images(input_image, size=(FLAGS.image_size, FLAGS.image_size))
       input_image = utils.convert2float(input_image)
       input_image.set_shape([size, size, 3])
+  """
 
-    with tf.gfile.FastGFile(model, 'rb') as model_file:
-      graph_def = tf.GraphDef()
-      graph_def.ParseFromString(model_file.read())
-    [output_image] = tf.import_graph_def(graph_def,
-                          input_map={'input_image': input_image},
+  with tf.gfile.FastGFile(model, 'rb') as model_file:
+     graph_def = tf.GraphDef()
+     graph_def.ParseFromString(model_file.read())
+  [output_image] = tf.import_graph_def(graph_def,
+                          input_map={'input_image': img_in}, # formerly input_image},
                           return_elements=['output_image:0'],
                           name='output')
 
@@ -39,6 +41,9 @@ def inference(model, img_in, img_out, size):
     generated = output_image.eval()
     with open(img_out, 'wb') as f:
       f.write(generated)
+
+  return generated
+
 
 def main(unused_argv):
   inference(FLAGS.model, FLAGS.input, FLAGS.output, FLAGS.image_size)
