@@ -1,4 +1,5 @@
 #! /usr/bin/python
+import io
 import spacy
 from spacy.lemmatizer import Lemmatizer
 from spacy.lang.en import LEMMA_INDEX, LEMMA_EXC, LEMMA_RULES
@@ -8,6 +9,8 @@ class Language:
     def __init__(self):
         self.nlp = spacy.load('en')
         self.lemmatizer = Lemmatizer(LEMMA_INDEX, LEMMA_EXC, LEMMA_RULES)
+        with io.open('cuss_words.txt', 'r', encoding='utf-8', errors='ignore') as cuss_words_file:
+            self.cuss_words = cuss_words_file.read().replace('\n', '')
 
     def lemmatize(self, token):
         return self.lemmatizer(token.text, token.pos_)[0]
@@ -17,6 +20,8 @@ class Language:
         ordered_keys = []
         counts = {}
         for token in doc:
+            if token.text in self.cuss_words:
+                continue
             if token.pos_ == 'NOUN':
                 word_key = (token.text, self.lemmatize(token))
                 inserted = False
