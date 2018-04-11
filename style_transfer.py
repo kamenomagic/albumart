@@ -2,6 +2,7 @@ import tensorflow as tf
 import utils
 import os
 
+valid_genres = ["rap", "pop", "hiphop", "country", "reggae", "indie"]
 
 def inference(model, img_in, img_out, size=256):
   graph = tf.Graph()
@@ -34,8 +35,15 @@ def transfer():
     inference("./transfer_graphs/album2" + genre + ".pb", "./samples/" + filename, "./results/" + filename)
 
 
+def all_transfer():
+  for filename in os.listdir("samples"):
+    for genre in valid_genres:
+      inference("./transfer_graphs/album2" + genre + ".pb", "./samples/" + filename, "./results/" + genre + "_from_" + filename)
+
+
 def main(unused_argv):
   transfer()
+  #all_transfer()
 
 
 if __name__ == '__main__':
