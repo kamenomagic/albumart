@@ -12,7 +12,7 @@ import os
 
 
 class CGAN:
-    def __init__(self, sess, dim_img=128, n_batches=10000, batch_size=8, model_dir="./cgan_model"):
+    def __init__(self, sess, dim_img=128, n_batches=300000, batch_size=8, model_dir="./cgan_model"):
         self.sess = sess
         self.dim_img = dim_img
         self.model_dir = model_dir

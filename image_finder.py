@@ -65,7 +65,7 @@ class ImageFinder:
                 raw_img.thumbnail((152, 152), Image.ANTIALIAS)
                 wid = raw_img.size[0] / 2
                 hgt = raw_img.size[1] / 2
-                raw_img = raw_img.crop((wid - 64, hgt - 64, wid + 64, hgt + 64))
+                #raw_img = raw_img.crop((wid - 64, hgt - 64, wid + 64, hgt + 64))
                 images.append(np.asarray(raw_img))
             except Exception as e:
                 print("could not load : ", img)

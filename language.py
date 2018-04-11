@@ -16,7 +16,11 @@ class Language:
         return self.lemmatizer(token.text, token.pos_)[0]
 
     def get_top_nouns(self, text):
-        doc = self.nlp(unicode(text, 'utf-8'))
+        if not isinstance(text, unicode):
+            decoded = unicode(text, 'utf-8')
+        else:
+            decoded = text
+        doc = self.nlp(decoded)
         ordered_keys = []
         counts = {}
         for token in doc:

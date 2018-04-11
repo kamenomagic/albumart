@@ -23,10 +23,10 @@ def inference(model, img_in, img_out, size=256):
                           return_elements=['output_image:0'],
                           name='output')
 
-  with tf.Session(graph=graph) as sess:
-    generated = output_image.eval()
-    with open(img_out, 'wb') as f:
-      f.write(generated)
+
+  generated = output_image.eval()
+  with open(img_out, 'wb') as f:
+    f.write(generated)
 
 
 def transfer():

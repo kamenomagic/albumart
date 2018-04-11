@@ -109,8 +109,8 @@ class _API(object):
         return json.loads(raw)['response']
         
     def _format_api_request(self, term_and_type, page=1):
-        """Format the request URL depending on the type of request"""            
-        request_term, request_type = str(term_and_type[0]), term_and_type[1]                
+        """Format the request URL depending on the type of request"""
+        request_term, request_type = str(term_and_type[0]), term_and_type[1]
         assert (request_type in self._API_REQUEST_TYPES), "Unknown API request type"
         
         # TODO - Clean this up (might not need separate returns)
@@ -150,15 +150,14 @@ class Genius(_API):
         #    print('Searching for "{0}" by {1}...'.format(song_title,artist_name))
         #else:
         #    print('Searching for "{0}"...'.format(song_title))
-        search_term = song_title + ' ' + artist_name
-        json_search = self._make_api_request((search_term,'search'))
+        search_term = song_title.encode('ascii', 'ignore') + ' ' + artist_name.encode("ascii", "ignore")
+        json_search = self._make_api_request((search_term, 'search'))
 
         artist_name = self._clean_string(artist_name)
         song_title = self._clean_string(song_title)
                 
         # Loop through search results, stopping as soon as title and artist of result match request
         n_hits = min(10,len(json_search['hits']))
-        print("Song title:  " + song_title)
         for i in range(n_hits):
             search_hit = json_search['hits'][i]['result']
             found_title = self._clean_string(search_hit['title'])
@@ -177,7 +176,6 @@ class Genius(_API):
             artist_match = perfect_artist_match or contains_artist_match
             title_match = perfect_title_match or contains_title_match
 
-            print(found_title)
             # --------------------------------------------------------------------
             if artist_match and title_match:
                 # Found correct song, accessing API ID

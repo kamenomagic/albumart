@@ -7,6 +7,18 @@ init_file = 'genius_init.txt'
 write_every = 100
 
 
+class LyricsApi:
+    def __init__(self):
+        self.g_api = genius.Genius()
+
+    def get_lyrics(self, artist_name, track_name, lyrics_only=True):
+        api_result, perf_artist_match, perf_title_match = self.g_api.search_song(track_name, artist_name)
+        if lyrics_only and api_result:
+            return api_result.lyrics
+        else:
+            return api_result
+
+
 def main():
     g_api = genius.Genius()
     mongo = MongoClient()
@@ -46,7 +58,6 @@ def main():
             else:
                 lyr_obj['lyrics'] = api_result.lyrics
                 lyrics_coll.insert_one(lyr_obj)
-                print("6")
         updated_idx = track['_id']
         mongo_start_idx = str(updated_idx)
         idx += 1
