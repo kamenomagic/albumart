@@ -1,39 +1,24 @@
-"""Translate an image to another image
-An example of command-line usage is:
-python export_graph.py --model pretrained/apple2orange.pb \
-                       --input input_sample.jpg \
-                       --output output_sample.jpg \
-                       --image_size 256
-"""
-
 import tensorflow as tf
 import utils
+import os
 
-FLAGS = tf.flags.FLAGS
 
-tf.flags.DEFINE_string('model', '', 'model path (.pb)')
-tf.flags.DEFINE_string('input', 'input_sample.jpg', 'input image path (.jpg)')
-tf.flags.DEFINE_string('output', 'output_sample.jpg', 'output image path (.jpg)')
-tf.flags.DEFINE_integer('image_size', '256', 'image size, default: 256')
-
-def inference(model, img_in, img_out, size):
+def inference(model, img_in, img_out, size=256):
   graph = tf.Graph()
 
-  """
   with graph.as_default():
     with tf.gfile.FastGFile(img_in, 'rb') as f:
       image_data = f.read()
       input_image = tf.image.decode_jpeg(image_data, channels=3)
-      input_image = tf.image.resize_images(input_image, size=(FLAGS.image_size, FLAGS.image_size))
+      input_image = tf.image.resize_images(input_image, size=(size, size))
       input_image = utils.convert2float(input_image)
       input_image.set_shape([size, size, 3])
-  """
 
-  with tf.gfile.FastGFile(model, 'rb') as model_file:
-     graph_def = tf.GraphDef()
-     graph_def.ParseFromString(model_file.read())
-  [output_image] = tf.import_graph_def(graph_def,
-                          input_map={'input_image': img_in}, # formerly input_image},
+    with tf.gfile.FastGFile(model, 'rb') as model_file:
+      graph_def = tf.GraphDef()
+      graph_def.ParseFromString(model_file.read())
+    [output_image] = tf.import_graph_def(graph_def,
+                          input_map={'input_image': input_image},
                           return_elements=['output_image:0'],
                           name='output')
 
@@ -42,11 +27,16 @@ def inference(model, img_in, img_out, size):
     with open(img_out, 'wb') as f:
       f.write(generated)
 
-  return generated
+
+def transfer():
+  for filename in os.listdir("samples"):
+    genre = filename.split("_")[0]
+    inference("./transfer_graphs/album2" + genre + ".pb", "./samples/" + filename, "./results/" + filename)
 
 
 def main(unused_argv):
-  inference(FLAGS.model, FLAGS.input, FLAGS.output, FLAGS.image_size)
+  transfer()
+
 
 if __name__ == '__main__':
   tf.app.run()
