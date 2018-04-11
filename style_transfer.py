@@ -19,14 +19,14 @@ def inference(model, img_in, img_out, size=256):
       graph_def = tf.GraphDef()
       graph_def.ParseFromString(model_file.read())
     [output_image] = tf.import_graph_def(graph_def,
-                          input_map={'input_image': input_image},
-                          return_elements=['output_image:0'],
-                          name='output')
+                                         input_map={'input_image': input_image},
+                                         return_elements=['output_image:0'],
+                                         name='output')
 
-
-  generated = output_image.eval()
-  with open(img_out, 'wb') as f:
-    f.write(generated)
+  with tf.Session(graph=graph) as sess:
+    generated = output_image.eval()
+    with open(img_out, 'wb') as f:
+      f.write(generated)
 
 
 def transfer():
